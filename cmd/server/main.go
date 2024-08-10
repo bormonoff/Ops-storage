@@ -3,17 +3,32 @@ package main
 import (
 	"net/http"
 
-	"ops-storage/internal/handlers"
+	"ops-storage/internal/server/handlers"
+	"ops-storage/internal/server/handlers/middleware"
+
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	mux := http.NewServeMux()
+	opts := options{}
+	Parse(&opts)
 
-	mux.HandleFunc("/update/", handlers.Update)
+	router := gin.Default()
 
-	err := http.ListenAndServe("localhost:8080", mux)
+	router.POST("/update/:type/:name/:value",
+		middleware.ValidateType,
+		middleware.ValidateName,
+		handlers.UpdateMetric)
+
+	router.GET("value/:type/:name",
+		middleware.ValidateType,
+		middleware.ValidateName,
+		handlers.GetMetric)
+
+	router.GET("/", handlers.GetAllMetrics)
+
+	err := http.ListenAndServe(opts.endpoint, router)
 	if err != nil {
 		panic(err)
 	}
-
 }
