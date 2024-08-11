@@ -4,6 +4,7 @@ all: build
 	
 build:
 	go build -o build/server ./cmd/server/*.go 
+	go build -o build/agent ./cmd/agent/*.go 
 
 test:
 	go test -count 1 ./...
