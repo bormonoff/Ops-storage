@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"ops-storage/internal/server/logger"
 	"os"
 )
 
@@ -16,4 +17,7 @@ func Parse(opts *options) {
 	if endpoint := os.Getenv("ADDRESS"); endpoint != "" {
 		opts.endpoint = endpoint
 	}
+
+	logger.MainLog.Infof("Options sucessfully parsed")
+	logger.MainLog.Infof("Options.endpoint = %s", opts.endpoint)
 }

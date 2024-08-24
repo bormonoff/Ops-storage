@@ -5,8 +5,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"ops-storage/internal/server/handlers/middleware"
-
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
@@ -73,11 +71,7 @@ func TestInvalidUpdateMetric(t *testing.T) {
 	}
 
 	r := gin.New()
-	r.Any("/update/:type/:name/:value", middleware.CheckIfPost,
-		middleware.CheckContentTypeIsText,
-		middleware.ValidateType,
-		middleware.ValidateName,
-		UpdateMetric)
+	r.Any("/update/:type/:name/:value", UpdateMetric)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			request := httptest.NewRequest(tt.input.method, tt.input.url, nil)
