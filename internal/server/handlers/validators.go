@@ -7,8 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func isTextType(contentType string) bool {
-	if contentType != gin.MIMEPlain {
+func isTextType(cType string) bool {
+	if cType != gin.MIMEPlain {
 		return false
 	}
 	return true
@@ -33,7 +33,10 @@ func isNameValid(name string) (int, bool) {
 }
 
 func isValueValid(val string) bool {
-	if mathed, _ := regexp.MatchString("^[[:digit:]]+[.]?[[:digit:]]$", val); !mathed {
+	intMatch, _ := regexp.MatchString("^[0-9]+$", val)
+	floatMatch, _ := regexp.MatchString("^[[:digit:]]+[.]?[[:digit:]]+$", val)
+
+	if !intMatch && !floatMatch {
 		return false
 	}
 	return true

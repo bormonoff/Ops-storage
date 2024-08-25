@@ -89,8 +89,6 @@ func NewCollection() Collection {
 	return collection
 }
 
-// [q]: В задании сказано покрыть юнитами. Но как тестировать клиента? Кажется, тут нужно только
-// хендлеры протестить, но это опять же интеграционная история.
 func (c *Collection) RefreshStats() {
 	runtime.ReadMemStats(&c.memStats)
 
@@ -118,6 +116,8 @@ func (c *Collection) RefreshStats() {
 	c.RuntimeStats.UintStats[stackSys] = c.memStats.StackSys
 	c.RuntimeStats.UintStats[sys] = c.memStats.Sys
 	c.RuntimeStats.UintStats[totalAlloc] = c.memStats.TotalAlloc
+	c.RuntimeStats.UintStats[numGC] = uint64(c.memStats.NumGC)
+	c.RuntimeStats.UintStats[numForcedGC] = uint64(c.memStats.NumForcedGC)
 
 	c.RuntimeStats.FloatStats[gcCPUFraction] = c.memStats.GCCPUFraction
 

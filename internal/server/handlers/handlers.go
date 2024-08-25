@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
-
+	
 	"ops-storage/internal/server/core"
 
 	"github.com/gin-gonic/gin"
@@ -13,68 +16,36 @@ type errCodePair struct {
 	descr string
 }
 
-func UpdateMetric(c *gin.Context) {
-	errCode, valid := validateUpdateMetric(c)
+type updateQueryValidator struct {
+	MType string
+	Name  string
+	Value string
+}
+
+func UpdateQueryMetric(c *gin.Context) {
+	validator := updateQueryValidator{MType: c.Param("type"), Name: c.Param("name"), Value: c.Param("value")}
+	errCode, valid := validateUpdateMetric(validator.MType, validator.Name, validator.Value)
 	if !valid {
 		c.String(errCode.code, errCode.descr)
 		return
 	}
 
-	err := core.GetStorageInstace().Insert(c.Param("type"), c.Param("name"), c.Param("value"))
+	err := core.GetStorageInstace().Insert(validator.MType, validator.Name, validator.Value)
 	if err == core.ErrIvalidMetric {
 		c.String(http.StatusBadRequest, "parsing counter error")
 		return
 	}
 }
 
-func validateUpdateMetric(c *gin.Context) (errCodePair, bool) {
-	if !isTextType(c.ContentType()) {
-		return errCodePair{
-			code:  http.StatusBadRequest,
-			descr: "request should be have a text/plain type\n",
-		}, false
-	}
-
-	if !isTypeValid(c.Param("type")) {
-		return errCodePair{
-			code:  http.StatusBadRequest,
-			descr: "parsing counter type error\n",
-		}, false
-	}
-
-	if code, ok := isNameValid(c.Param("name")); !ok {
-		if code == http.StatusNotFound {
-			return errCodePair{
-				code:  code,
-				descr: "metric isn't found\n",
-			}, false
-		} else {
-			return errCodePair{
-				code:  code,
-				descr: "parsing counter name error\n",
-			}, false
-		}
-
-	}
-
-	if !isValueValid(c.Param("value")) {
-		return errCodePair{
-			code:  http.StatusBadRequest,
-			descr: "parsing counter value error\n",
-		}, false
-	}
-
-	return errCodePair{}, true
-}
-
-func GetMetric(c *gin.Context) {
-	errCode, valid := validateGetMetric(c)
+func GetMetricViaQuery(c *gin.Context) {
+	validator := updateQueryValidator{MType: c.Param("type"), Name: c.Param("name")}
+	errCode, valid := validateGetMetric(validator.MType, validator.Name)
 	if !valid {
 		c.String(errCode.code, errCode.descr)
 		return
 	}
 
-	res, err := core.GetStorageInstace().GetMetric(c.Param("type"), c.Param("name"))
+	res, err := core.GetStorageInstace().GetMetric(validator.MType, validator.Name)
 	if err == core.ErrNotFound {
 		c.String(http.StatusNotFound, "parsing counter error")
 		return
@@ -82,57 +53,79 @@ func GetMetric(c *gin.Context) {
 	c.String(http.StatusOK, res)
 }
 
-func validateGetMetric(c *gin.Context) (errCodePair, bool) {
-	if !isTextType(c.ContentType()) {
-		return errCodePair{
-			code:  http.StatusBadRequest,
-			descr: "request should be have a text/plain type\n",
-		}, false
+type updateJsonValidator struct {
+	MType string      `json:"type"`
+	Name  string      `json:"id"`
+	Delta json.Number `json:"delta,omitempty"`
+	Value json.Number `json:"value,omitempty"`
+}
+
+func UpdateJsonMetric(c *gin.Context) {
+	if c.ContentType() != gin.MIMEJSON {
+		c.String(http.StatusBadRequest, "request should have an application/json type\n")
+		return
 	}
 
-	if !isTypeValid(c.Param("type")) {
-		return errCodePair{
-			code:  http.StatusBadRequest,
-			descr: "parsing counter type error\n",
-		}, false
+	var validator updateJsonValidator
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+	err = json.Unmarshal(body, &validator)
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
 
-	if code, ok := isNameValid(c.Param("name")); !ok {
-		if code == http.StatusNotFound {
-			return errCodePair{
-				code:  code,
-				descr: "metric isn't found\n",
-			}, false
-		} else {
-			return errCodePair{
-				code:  code,
-				descr: "parsing counter name error\n",
-			}, false
-		}
-
+	if validator.Delta != "" {
+		err = core.GetStorageInstace().Insert(validator.MType, validator.Name, string(validator.Delta))
+	} else {
+		err = core.GetStorageInstace().Insert(validator.MType, validator.Name, string(validator.Value))
+	}
+	if err == core.ErrIvalidMetric {
+		c.String(http.StatusBadRequest, "parsing counter error")
+		return
 	}
 
-	return errCodePair{}, true
+	c.JSON(http.StatusOK, validator)
+}
+
+func GetMetricViaJson(c *gin.Context) {
+	if c.ContentType() != gin.MIMEJSON {
+		c.String(http.StatusBadRequest, "request should have an application/json type\n")
+		return
+	}
+
+	var validator updateJsonValidator
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		fmt.Println(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+	err = json.Unmarshal(body, &validator)
+	if err != nil {
+		fmt.Println(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	res, err := core.GetStorageInstace().GetMetric(validator.MType, validator.Name)
+	if err == core.ErrNotFound {
+		c.String(http.StatusNotFound, fmt.Sprintf("%s counter not found\n", validator.Name))
+		return
+	}
+	if validator.MType == "gauge" {
+		validator.Value = json.Number(res)
+	} else {
+		validator.Delta = json.Number(res)
+	}
+	c.JSON(http.StatusOK, validator)
 }
 
 func GetAllMetrics(c *gin.Context) {
-	errCode, valid := validateGetAllMetrics(c)
-	if !valid {
-		c.String(errCode.code, errCode.descr)
-		return
-	}
 	res := core.GetStorageInstace().GetActualMetrics()
 
 	c.JSON(http.StatusOK, res)
-}
-
-func validateGetAllMetrics(c *gin.Context) (errCodePair, bool) {
-	if !isTextType(c.ContentType()) {
-		return errCodePair{
-			code:  http.StatusBadRequest,
-			descr: "request should be have a text/plain type\n",
-		}, false
-	}
-
-	return errCodePair{}, true
 }

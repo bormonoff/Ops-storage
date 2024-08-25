@@ -60,6 +60,7 @@ func TestIsValueValid(t *testing.T) {
 		inputName string
 		expect    bool
 	}{
+		{inputName: "0", expect: true},
 		{inputName: "123", expect: true},
 		{inputName: "123.0", expect: true},
 		{inputName: "123.", expect: false},

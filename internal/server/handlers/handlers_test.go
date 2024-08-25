@@ -71,7 +71,7 @@ func TestInvalidUpdateMetric(t *testing.T) {
 	}
 
 	r := gin.New()
-	r.Any("/update/:type/:name/:value", UpdateMetric)
+	r.Any("/update/:type/:name/:value", UpdateQueryMetric)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			request := httptest.NewRequest(tt.input.method, tt.input.url, nil)

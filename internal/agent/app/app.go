@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"math/rand"
 	"strconv"
 	"sync"
 	"time"
@@ -59,12 +60,17 @@ func (app *app) SendData() {
 
 		for id, val := range app.collector.RuntimeStats.FloatStats {
 			url := fmt.Sprintf("%v/update/gauge/%v/%v",
-				app.config.serverAddr, string(id), strconv.FormatFloat(val, 'g', -1, 64))
+				app.config.serverAddr, string(id), strconv.FormatFloat(val, 'f', 1, 64))
 			handlers.SendPostRequest(url, headers)
 		}
-		url := fmt.Sprintf("%v/update/counter/PollCount/%v",
+
+		pollUrl := fmt.Sprintf("%v/update/counter/PollCount/%v",
 			app.config.serverAddr, strconv.Itoa(app.collector.PollCount))
-		handlers.SendPostRequest(url, headers)
+		handlers.SendPostRequest(pollUrl, headers)
+
+		randValue := fmt.Sprintf("%v/update/gauge/RandomValue/%v",
+			app.config.serverAddr, strconv.Itoa(int(rand.Int())))
+		handlers.SendPostRequest(randValue, headers)
 
 		app.mu.Unlock()
 

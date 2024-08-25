@@ -46,7 +46,7 @@ func (s *Storage) GetActualMetrics() *map[string]string {
 		res[id] = strconv.FormatInt(int64(val), 10)
 	}
 	for id, val := range s.gaugeCounters {
-		res[id] = strconv.FormatFloat(float64(val), 'g', -1, 64)
+		res[id] = strconv.FormatFloat(float64(val), 'f', -1, 64)
 	}
 	return &res
 }
@@ -87,7 +87,7 @@ func (s *Storage) GetMetric(counterType string, name string) (string, error) {
 		if !ok {
 			return "", ErrNotFound
 		}
-		result = strconv.FormatFloat(float64(val), 'g', -1, 64)
+		result = strconv.FormatFloat(float64(val), 'f', -1, 64)
 	case "counter":
 		val, ok := s.incrementalCounters[name]
 		if !ok {
