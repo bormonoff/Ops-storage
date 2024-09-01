@@ -7,10 +7,10 @@ import (
 
 const spaceSeparator string = " "
 
-// A sugar log needs for a func that isn't impact on performance
+// A sugar log needs for the funcs that aren't impact on performance
 var MainLog *zap.SugaredLogger = zap.NewNop().Sugar()
 
-// A strongly typed logger for a highload func
+// A strongly typed logger for highload funcs
 var HandlerLog *zap.Logger = zap.NewNop()
 
 func genRootCfg() zap.Config {

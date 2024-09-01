@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	
 	"ops-storage/internal/server/core"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,6 +22,10 @@ type updateQueryValidator struct {
 	Value string
 }
 
+func (v updateQueryValidator) String() string {
+	return fmt.Sprint(v.MType, v.Name, v.Value)
+}
+
 func UpdateQueryMetric(c *gin.Context) {
 	validator := updateQueryValidator{MType: c.Param("type"), Name: c.Param("name"), Value: c.Param("value")}
 	errCode, valid := validateUpdateMetric(validator.MType, validator.Name, validator.Value)
@@ -35,6 +39,7 @@ func UpdateQueryMetric(c *gin.Context) {
 		c.String(http.StatusBadRequest, "parsing counter error")
 		return
 	}
+	c.String(http.StatusOK, validator.String())
 }
 
 func GetMetricViaQuery(c *gin.Context) {
@@ -54,10 +59,10 @@ func GetMetricViaQuery(c *gin.Context) {
 }
 
 type updateJsonValidator struct {
-	MType string      `json:"type"`
-	Name  string      `json:"id"`
-	Delta json.Number `json:"delta,omitempty"`
-	Value json.Number `json:"value,omitempty"`
+	MType   string      `json:"type"`
+	Name    string      `json:"id"`
+	Counter json.Number `json:"delta,omitempty"`
+	Gauge   json.Number `json:"value,omitempty"`
 }
 
 func UpdateJsonMetric(c *gin.Context) {
@@ -78,10 +83,10 @@ func UpdateJsonMetric(c *gin.Context) {
 		return
 	}
 
-	if validator.Delta != "" {
-		err = core.GetStorageInstace().Insert(validator.MType, validator.Name, string(validator.Delta))
+	if validator.Counter != "" {
+		err = core.GetStorageInstace().Insert(validator.MType, validator.Name, string(validator.Counter))
 	} else {
-		err = core.GetStorageInstace().Insert(validator.MType, validator.Name, string(validator.Value))
+		err = core.GetStorageInstace().Insert(validator.MType, validator.Name, string(validator.Gauge))
 	}
 	if err == core.ErrIvalidMetric {
 		c.String(http.StatusBadRequest, "parsing counter error")
@@ -117,15 +122,21 @@ func GetMetricViaJson(c *gin.Context) {
 		return
 	}
 	if validator.MType == "gauge" {
-		validator.Value = json.Number(res)
+		validator.Gauge = json.Number(res)
 	} else {
-		validator.Delta = json.Number(res)
+		validator.Counter = json.Number(res)
 	}
 	c.JSON(http.StatusOK, validator)
 }
 
 func GetAllMetrics(c *gin.Context) {
-	res := core.GetStorageInstace().GetActualMetrics()
+	metrics := core.GetStorageInstace().GetActualMetrics()
 
-	c.JSON(http.StatusOK, res)
+	var text strings.Builder
+	for name, val := range *metrics {
+		text.WriteString(fmt.Sprintf("%s = %s<br>", name, val))
+	}
+	c.Header("Content-Type", "text/html")
+
+	c.String(http.StatusOK, text.String())
 }

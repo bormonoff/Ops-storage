@@ -1,6 +1,9 @@
 package app
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -9,12 +12,15 @@ import (
 
 	"ops-storage/internal/agent/collector"
 	"ops-storage/internal/agent/handlers"
+	"ops-storage/internal/agent/logger"
 )
 
 type Config struct {
 	serverAddr     string
 	PollInterval   int
 	ReportInterval int
+
+	HasCompression bool
 }
 
 func (c *Config) SetAddr(url string) {
@@ -45,35 +51,101 @@ func (app *app) updateData() {
 	}
 }
 
-func (app *app) SendData() {
-	headers := map[string]string{
-		"Content-Type": "text/plain",
+type updateJsonValidator struct {
+	MType   string      `json:"type"`
+	Name    string      `json:"id"`
+	Counter json.Number `json:"delta,omitempty"`
+	Gauge   json.Number `json:"value,omitempty"`
+}
+
+func (v updateJsonValidator) String() string {
+	return fmt.Sprint(v.MType, v.Name, v.Counter, v.Gauge)
+}
+
+func updateCounters(c *collector.Collection) []updateJsonValidator {
+	// +2 is becouse collector has pollcount and randomval additional fields
+	totalUpdateCount := 2 + len(c.RuntimeStats.UintStats) + len(c.RuntimeStats.FloatStats)
+	var toUpdate = make([]updateJsonValidator, totalUpdateCount)
+
+	idx := -1
+	for id, val := range c.RuntimeStats.UintStats {
+		idx++
+		toUpdate[idx] = updateJsonValidator{
+			MType: "gauge",
+			Name:  string(id),
+			Gauge: json.Number(strconv.FormatUint(val, 10)),
+		}
 	}
+	for id, val := range c.RuntimeStats.FloatStats {
+		idx++
+		toUpdate[idx] = updateJsonValidator{
+			MType: "gauge",
+			Name:  string(id),
+			Gauge: json.Number(strconv.FormatFloat(val, 'f', 1, 64)),
+		}
+	}
+
+	idx++
+	toUpdate[idx] = updateJsonValidator{
+		MType: "counter",
+		Name:  "PollCount",
+		Gauge: json.Number(strconv.Itoa(c.PollCount)),
+	}
+	idx++
+	toUpdate[idx] = updateJsonValidator{
+		MType: "gauge",
+		Name:  "RandomValue",
+		Gauge: json.Number(strconv.Itoa(int(rand.Int()))),
+	}
+
+	return toUpdate
+}
+
+func (app *app) sendData() {
+	headers := map[string]string{
+		"Content-Type": "application/json",
+	}
+
+	if app.config.HasCompression {
+		headers["Content-Encoding"] = "gzip"
+	}
+
+	url := fmt.Sprintf("%v/update", app.config.serverAddr)
 	for {
 		app.mu.Lock()
 
-		for id, val := range app.collector.RuntimeStats.UintStats {
-			url := fmt.Sprintf("%v/update/gauge/%v/%v",
-				app.config.serverAddr, string(id), strconv.FormatUint(val, 10))
-			handlers.SendPostRequest(url, headers)
-		}
-
-		for id, val := range app.collector.RuntimeStats.FloatStats {
-			url := fmt.Sprintf("%v/update/gauge/%v/%v",
-				app.config.serverAddr, string(id), strconv.FormatFloat(val, 'f', 1, 64))
-			handlers.SendPostRequest(url, headers)
-		}
-
-		pollUrl := fmt.Sprintf("%v/update/counter/PollCount/%v",
-			app.config.serverAddr, strconv.Itoa(app.collector.PollCount))
-		handlers.SendPostRequest(pollUrl, headers)
-
-		randValue := fmt.Sprintf("%v/update/gauge/RandomValue/%v",
-			app.config.serverAddr, strconv.Itoa(int(rand.Int())))
-		handlers.SendPostRequest(randValue, headers)
-
+		counters := updateCounters(&app.collector)
 		app.mu.Unlock()
 
+		for _, tmp := range counters {
+			body, err := json.Marshal(tmp)
+			if err != nil {
+				logger.Log.Errorf(err.Error())
+				continue
+			}
+
+			if app.config.HasCompression {
+				var buf bytes.Buffer
+				encoder, err := gzip.NewWriterLevel(&buf, gzip.BestSpeed)
+				if err != nil {
+					logger.Log.Errorf("Compressor isn't initialized: %s", err.Error())
+					continue
+				}
+
+				_, err = encoder.Write(body)
+				if err != nil {
+					logger.Log.Errorf("Can't wrine body: %s", err.Error())
+					continue
+				}
+				encoder.Close()
+				body = buf.Bytes()
+			}
+			err = handlers.SendPostRequest(url, headers, body)
+			if err != nil {
+				logger.Log.Errorf("Can't update metric: %s", err.Error())
+			}
+			logger.Log.Infof("Metric %s has been successfully updated", tmp.Name)
+		}
 		time.Sleep(time.Duration(app.config.ReportInterval) * time.Second)
 	}
 }
@@ -83,7 +155,7 @@ func (app *app) Run() {
 	wg.Add(2)
 
 	go app.updateData()
-	go app.SendData()
+	go app.sendData()
 
 	wg.Wait()
 }

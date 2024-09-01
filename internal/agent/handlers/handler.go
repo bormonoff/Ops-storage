@@ -1,15 +1,13 @@
 package handlers
 
 import (
-	"fmt"
-
 	"github.com/go-resty/resty/v2"
 )
 
 var client = resty.New()
 
-func SendPostRequest(url string, headers map[string]string) {
-	request := client.R()
+func SendPostRequest(url string, headers map[string]string, body any) error {
+	request := client.R().SetBody(body)
 
 	for header, value := range headers {
 		request.SetHeader(header, value)
@@ -17,6 +15,8 @@ func SendPostRequest(url string, headers map[string]string) {
 
 	_, err := request.Post(url)
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
+
+	return nil
 }
