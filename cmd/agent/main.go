@@ -7,7 +7,7 @@ import (
 
 func main() {
 	logger.Initialize()
-	logger.Log.Info("loger successfully initialized")
+	logger.Log.Info("The logger has been successfully initialized")
 
 	opts := options{}
 	Parse(&opts)
@@ -19,7 +19,7 @@ func main() {
 	})
 	config.SetAddr(opts.endpoint)
 
-	app := app.NewApp(config)
+	app := app.New(config)
 
 	app.Run()
 }

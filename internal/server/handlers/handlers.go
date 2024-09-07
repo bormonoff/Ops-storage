@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"ops-storage/internal/server/core"
+	"ops-storage/internal/server/storage"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -34,8 +34,8 @@ func UpdateQueryMetric(c *gin.Context) {
 		return
 	}
 
-	err := core.GetStorageInstace().Insert(validator.MType, validator.Name, validator.Value)
-	if err == core.ErrIvalidMetric {
+	err := storage.StorageInstace().Insert(validator.MType, validator.Name, validator.Value)
+	if err == storage.ErrIvalidMetric {
 		c.String(http.StatusBadRequest, "parsing counter error")
 		return
 	}
@@ -50,28 +50,28 @@ func GetMetricViaQuery(c *gin.Context) {
 		return
 	}
 
-	res, err := core.GetStorageInstace().GetMetric(validator.MType, validator.Name)
-	if err == core.ErrNotFound {
+	res, err := storage.StorageInstace().GetMetric(validator.MType, validator.Name)
+	if err == storage.ErrNotFound {
 		c.String(http.StatusNotFound, "parsing counter error")
 		return
 	}
 	c.String(http.StatusOK, res)
 }
 
-type updateJsonValidator struct {
+type updateJSONValidator struct {
 	MType   string      `json:"type"`
 	Name    string      `json:"id"`
 	Counter json.Number `json:"delta,omitempty"`
 	Gauge   json.Number `json:"value,omitempty"`
 }
 
-func UpdateJsonMetric(c *gin.Context) {
+func UpdateJSONMetric(c *gin.Context) {
 	if c.ContentType() != gin.MIMEJSON {
 		c.String(http.StatusBadRequest, "request should have an application/json type\n")
 		return
 	}
 
-	var validator updateJsonValidator
+	var validator updateJSONValidator
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
@@ -84,11 +84,11 @@ func UpdateJsonMetric(c *gin.Context) {
 	}
 
 	if validator.Counter != "" {
-		err = core.GetStorageInstace().Insert(validator.MType, validator.Name, string(validator.Counter))
+		err = storage.StorageInstace().Insert(validator.MType, validator.Name, string(validator.Counter))
 	} else {
-		err = core.GetStorageInstace().Insert(validator.MType, validator.Name, string(validator.Gauge))
+		err = storage.StorageInstace().Insert(validator.MType, validator.Name, string(validator.Gauge))
 	}
-	if err == core.ErrIvalidMetric {
+	if err == storage.ErrIvalidMetric {
 		c.String(http.StatusBadRequest, "parsing counter error")
 		return
 	}
@@ -96,13 +96,13 @@ func UpdateJsonMetric(c *gin.Context) {
 	c.JSON(http.StatusOK, validator)
 }
 
-func GetMetricViaJson(c *gin.Context) {
+func GetMetricViaJSON(c *gin.Context) {
 	if c.ContentType() != gin.MIMEJSON {
 		c.String(http.StatusBadRequest, "request should have an application/json type\n")
 		return
 	}
 
-	var validator updateJsonValidator
+	var validator updateJSONValidator
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		fmt.Println(err)
@@ -116,8 +116,8 @@ func GetMetricViaJson(c *gin.Context) {
 		return
 	}
 
-	res, err := core.GetStorageInstace().GetMetric(validator.MType, validator.Name)
-	if err == core.ErrNotFound {
+	res, err := storage.StorageInstace().GetMetric(validator.MType, validator.Name)
+	if err == storage.ErrNotFound {
 		c.String(http.StatusNotFound, fmt.Sprintf("%s counter not found\n", validator.Name))
 		return
 	}
@@ -130,7 +130,7 @@ func GetMetricViaJson(c *gin.Context) {
 }
 
 func GetAllMetrics(c *gin.Context) {
-	metrics := core.GetStorageInstace().GetActualMetrics()
+	metrics := storage.StorageInstace().GetAllMetrics()
 
 	var text strings.Builder
 	for name, val := range *metrics {

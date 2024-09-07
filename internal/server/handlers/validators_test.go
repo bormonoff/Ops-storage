@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"testing"
 
@@ -22,7 +21,7 @@ func TestIsTypeValid(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		testname := fmt.Sprintf("%s", tt.inputName)
+		testname := tt.inputName
 		t.Run(testname, func(t *testing.T) {
 			ok := isTypeValid(tt.inputName)
 			assert.Equalf(t, ok, tt.expect, "want %t, got %t", ok, tt.expect)
@@ -46,7 +45,7 @@ func TestIsNameValid(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		testname := fmt.Sprintf("%s", tt.inputName)
+		testname := tt.inputName
 		t.Run(testname, func(t *testing.T) {
 			code, ok := isNameValid(tt.inputName)
 			assert.Equalf(t, code, tt.expect.code, "want %d, got %d", code, tt.expect.code)
@@ -69,7 +68,7 @@ func TestIsValueValid(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		testname := fmt.Sprintf("%s", tt.inputName)
+		testname := tt.inputName
 		t.Run(testname, func(t *testing.T) {
 			ok := isValueValid(tt.inputName)
 			assert.Equalf(t, ok, tt.expect, "want %t, got %t", tt.expect, ok)

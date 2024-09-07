@@ -33,7 +33,7 @@ type app struct {
 	config    Config
 }
 
-func NewApp(config Config) *app {
+func New(config Config) *app {
 	app := app{
 		collector: collector.NewCollection(),
 		config:    config,
@@ -51,26 +51,26 @@ func (app *app) updateData() {
 	}
 }
 
-type updateJsonValidator struct {
+type updateJSONValidator struct {
 	MType   string      `json:"type"`
 	Name    string      `json:"id"`
 	Counter json.Number `json:"delta,omitempty"`
 	Gauge   json.Number `json:"value,omitempty"`
 }
 
-func (v updateJsonValidator) String() string {
+func (v updateJSONValidator) String() string {
 	return fmt.Sprint(v.MType, v.Name, v.Counter, v.Gauge)
 }
 
-func updateCounters(c *collector.Collection) []updateJsonValidator {
+func updateCounters(c *collector.Collection) []updateJSONValidator {
 	// +2 is becouse collector has pollcount and randomval additional fields
 	totalUpdateCount := 2 + len(c.RuntimeStats.UintStats) + len(c.RuntimeStats.FloatStats)
-	var toUpdate = make([]updateJsonValidator, totalUpdateCount)
+	var toUpdate = make([]updateJSONValidator, totalUpdateCount)
 
 	idx := -1
 	for id, val := range c.RuntimeStats.UintStats {
 		idx++
-		toUpdate[idx] = updateJsonValidator{
+		toUpdate[idx] = updateJSONValidator{
 			MType: "gauge",
 			Name:  string(id),
 			Gauge: json.Number(strconv.FormatUint(val, 10)),
@@ -78,7 +78,7 @@ func updateCounters(c *collector.Collection) []updateJsonValidator {
 	}
 	for id, val := range c.RuntimeStats.FloatStats {
 		idx++
-		toUpdate[idx] = updateJsonValidator{
+		toUpdate[idx] = updateJSONValidator{
 			MType: "gauge",
 			Name:  string(id),
 			Gauge: json.Number(strconv.FormatFloat(val, 'f', 1, 64)),
@@ -86,13 +86,13 @@ func updateCounters(c *collector.Collection) []updateJsonValidator {
 	}
 
 	idx++
-	toUpdate[idx] = updateJsonValidator{
+	toUpdate[idx] = updateJSONValidator{
 		MType: "counter",
 		Name:  "PollCount",
 		Gauge: json.Number(strconv.Itoa(c.PollCount)),
 	}
 	idx++
-	toUpdate[idx] = updateJsonValidator{
+	toUpdate[idx] = updateJSONValidator{
 		MType: "gauge",
 		Name:  "RandomValue",
 		Gauge: json.Number(strconv.Itoa(int(rand.Int()))),

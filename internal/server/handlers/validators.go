@@ -3,16 +3,7 @@ package handlers
 import (
 	"net/http"
 	"regexp"
-
-	"github.com/gin-gonic/gin"
 )
-
-func isTextType(cType string) bool {
-	if cType != gin.MIMEPlain {
-		return false
-	}
-	return true
-}
 
 func isTypeValid(kind string) bool {
 	if mathed, _ := regexp.MatchString("^[[:alpha:]]+$", kind); !mathed {

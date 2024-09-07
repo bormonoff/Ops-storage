@@ -1,4 +1,4 @@
-package core
+package storage
 
 import (
 	"testing"
@@ -55,7 +55,7 @@ func TestInvalidInsert(t *testing.T) {
 		},
 	}
 
-	storage := createNewStorage()
+	storage := New()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := storage.Insert(tt.args.counterType, tt.args.name, tt.args.val); (err != nil) != tt.wantErr {
@@ -93,7 +93,7 @@ func TestInvalidGet(t *testing.T) {
 		},
 	}
 
-	storage := createNewStorage()
+	storage := New()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if _, err := storage.GetMetric(tt.args.counterType, tt.args.name); (err != nil) != tt.wantErr {
@@ -131,7 +131,7 @@ func TestSequenceGaugeInsert(t *testing.T) {
 		},
 	}
 
-	storage := createNewStorage()
+	storage := New()
 
 	for _, v := range test.args {
 		err := storage.Insert(v.counterType, v.name, v.val)
@@ -172,7 +172,7 @@ func TestSequenceAbsoluteInsert(t *testing.T) {
 		},
 	}
 
-	storage := createNewStorage()
+	storage := New()
 
 	for _, v := range test.args {
 		err := storage.Insert(v.counterType, v.name, v.val)

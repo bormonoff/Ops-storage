@@ -11,6 +11,7 @@ func Initialize() {
 	cfg := zap.NewProductionConfig()
 
 	cfg.EncoderConfig.CallerKey = ""
+	cfg.EncoderConfig.StacktraceKey = ""
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	logger, err := cfg.Build()
 	if err != nil {
