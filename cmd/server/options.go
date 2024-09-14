@@ -2,13 +2,15 @@ package main
 
 import (
 	"flag"
-	"ops-storage/internal/server/logger"
 	"os"
 	"strconv"
+
+	"ops-storage/internal/server/logger"
 )
 
 type options struct {
 	endpoint string
+	dsn      string
 
 	// recover options
 	storeInterval int
@@ -18,9 +20,11 @@ type options struct {
 
 func Parse(opts *options) {
 	flag.StringVar(&opts.endpoint, "a", "localhost:8080", "server address. localhost:8080 by default")
+	flag.BoolVar(&opts.restore, "r", true, "Should server load data from the previous process")
 	flag.IntVar(&opts.storeInterval, "i", 3, "store interval in seconds")
 	flag.StringVar(&opts.filePath, "f", "/tmp/metrics-db.json", "path to a dump file")
-	flag.BoolVar(&opts.restore, "r", true, "Should server load data from the previous process")
+	flag.StringVar(&opts.dsn, "d", "", "A DSN string to a Postgres database. Empty string turns on memory storage")
+
 	flag.Parse()
 
 	if endpoint := os.Getenv("ADDRESS"); endpoint != "" {
@@ -30,7 +34,7 @@ func Parse(opts *options) {
 	if interval := os.Getenv("STORE_INTERVAL"); interval != "" {
 		interval, err := strconv.Atoi(interval)
 		if err != nil {
-			logger.MainLog.Warnf("Can't parse STORE_INTERVAL env. Use default interval. Err: %s", err.Error())
+			logger.MainLog.Warnf("Error parsing STORE_INTERVAL env. Use default interval. Err: %s", err.Error())
 		}
 		opts.storeInterval = interval
 	}
@@ -42,9 +46,13 @@ func Parse(opts *options) {
 	if restore := os.Getenv("RESTORE"); restore != "" {
 		restore, err := strconv.ParseBool(restore)
 		if err != nil {
-			logger.MainLog.Warnf("Can't parse RESTORE env. Use default restore flag. Err: %s", err.Error())
+			logger.MainLog.Warnf("Error parsing RESTORE env. Use default restore flag. Err: %s", err.Error())
 		}
 		opts.restore = restore
+	}
+
+	if dsn := os.Getenv("DATABASE_DSN"); dsn != "" {
+		opts.dsn = dsn
 	}
 
 	logger.MainLog.Infof("Options sucessfully parsed")
@@ -52,4 +60,5 @@ func Parse(opts *options) {
 	logger.MainLog.Infof("Options.storeInterval = %d", opts.storeInterval)
 	logger.MainLog.Infof("Options.filePath = %s", opts.filePath)
 	logger.MainLog.Infof("Options.restore = %t", opts.restore)
+	logger.MainLog.Infof("Options.dsn = %s", opts.dsn)
 }

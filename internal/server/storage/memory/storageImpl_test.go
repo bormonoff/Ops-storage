@@ -1,4 +1,4 @@
-package storage
+package memory
 
 import (
 	"testing"
@@ -55,10 +55,10 @@ func TestInvalidInsert(t *testing.T) {
 		},
 	}
 
-	storage := New()
+	memStorage := New()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := storage.Insert(tt.args.counterType, tt.args.name, tt.args.val); (err != nil) != tt.wantErr {
+			if err := memStorage.Insert(tt.args.counterType, tt.args.name, tt.args.val); (err != nil) != tt.wantErr {
 				assert.Error(t, err)
 			}
 		})
@@ -93,10 +93,10 @@ func TestInvalidGet(t *testing.T) {
 		},
 	}
 
-	storage := New()
+	memStorage := New()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := storage.GetMetric(tt.args.counterType, tt.args.name); (err != nil) != tt.wantErr {
+			if _, err := memStorage.Get(tt.args.counterType, tt.args.name); (err != nil) != tt.wantErr {
 				assert.Error(t, err)
 			}
 		})
@@ -131,13 +131,13 @@ func TestSequenceGaugeInsert(t *testing.T) {
 		},
 	}
 
-	storage := New()
+	memStorage := New()
 
 	for _, v := range test.args {
-		err := storage.Insert(v.counterType, v.name, v.val)
+		err := memStorage.Insert(v.counterType, v.name, v.val)
 		assert.NoError(t, err)
 	}
-	val, err := storage.GetMetric(test.args[0].counterType, test.args[0].name)
+	val, err := memStorage.Get(test.args[0].counterType, test.args[0].name)
 	if err != nil {
 		assert.NoError(t, err)
 	}
@@ -172,13 +172,13 @@ func TestSequenceAbsoluteInsert(t *testing.T) {
 		},
 	}
 
-	storage := New()
+	memStorage := New()
 
 	for _, v := range test.args {
-		err := storage.Insert(v.counterType, v.name, v.val)
+		err := memStorage.Insert(v.counterType, v.name, v.val)
 		assert.NoError(t, err)
 	}
-	val, err := storage.GetMetric(test.args[0].counterType, test.args[0].name)
+	val, err := memStorage.Get(test.args[0].counterType, test.args[0].name)
 	assert.NoError(t, err)
 	assert.Equal(t, val, "70")
 }

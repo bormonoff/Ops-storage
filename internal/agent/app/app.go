@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"strconv"
 	"sync"
 	"time"
@@ -91,12 +90,6 @@ func updateCounters(c *collector.Collection) []updateJSONValidator {
 		Name:  "PollCount",
 		Gauge: json.Number(strconv.Itoa(c.PollCount)),
 	}
-	idx++
-	toUpdate[idx] = updateJSONValidator{
-		MType: "gauge",
-		Name:  "RandomValue",
-		Gauge: json.Number(strconv.Itoa(int(rand.Int()))),
-	}
 
 	return toUpdate
 }
@@ -134,7 +127,7 @@ func (app *app) sendData() {
 
 				_, err = encoder.Write(body)
 				if err != nil {
-					logger.Log.Errorf("Can't wrine body: %s", err.Error())
+					logger.Log.Errorf("Write body error: %s", err.Error())
 					continue
 				}
 				encoder.Close()
@@ -142,7 +135,7 @@ func (app *app) sendData() {
 			}
 			err = handlers.SendPostRequest(url, headers, body)
 			if err != nil {
-				logger.Log.Errorf("Can't update metric: %s", err.Error())
+				logger.Log.Errorf("Update metric error: %s", err.Error())
 			}
 			logger.Log.Infof("Metric %s has been successfully updated", tmp.Name)
 		}

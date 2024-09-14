@@ -1,16 +1,12 @@
-package storage
+package memory
 
 import (
 	"strconv"
+
+	serror "ops-storage/internal/server/storage/error"
 )
 
-type BaseStorage interface {
-	Insert(counterType string, name string, val string) error
-	GetMetric(counterType string, name string) (string, error)
-	GetAllMetrics() *map[string]string
-}
-
-func (s *storage) GetAllMetrics() *map[string]string {
+func (s *memStorage) GetAll() (*map[string]string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -23,10 +19,10 @@ func (s *storage) GetAllMetrics() *map[string]string {
 		res[id] = strconv.FormatFloat(float64(val), 'f', -1, 64)
 	}
 	s.storeToFile()
-	return &res
+	return &res, nil
 }
 
-func (s *storage) Insert(counterType string, name string, val string) error {
+func (s *memStorage) Insert(counterType string, name string, val string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -34,13 +30,13 @@ func (s *storage) Insert(counterType string, name string, val string) error {
 	case "gauge":
 		newVal, err := strconv.ParseFloat(val, 64)
 		if err != nil {
-			return ErrIvalidMetric
+			return serror.ErrIvalidMetric
 		}
 		s.GaugeCounters[name] = gaugeCounter(newVal)
 	case "counter":
 		newVal, err := strconv.ParseInt(val, 10, 64)
 		if err != nil {
-			return ErrIvalidMetric
+			return serror.ErrIvalidMetric
 		}
 
 		_, ok := s.IncrementalCounters[name]
@@ -50,13 +46,13 @@ func (s *storage) Insert(counterType string, name string, val string) error {
 			s.IncrementalCounters[name] = incrementalCounter(newVal)
 		}
 	default:
-		return ErrIvalidMetric
+		return serror.ErrIvalidMetric
 	}
 
 	return nil
 }
 
-func (s *storage) GetMetric(counterType string, name string) (string, error) {
+func (s *memStorage) Get(counterType string, name string) (string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -66,18 +62,25 @@ func (s *storage) GetMetric(counterType string, name string) (string, error) {
 	case "gauge":
 		val, ok := s.GaugeCounters[name]
 		if !ok {
-			return "", ErrNotFound
+			return "", serror.ErrNotFound
 		}
 		result = strconv.FormatFloat(float64(val), 'f', -1, 64)
 	case "counter":
 		val, ok := s.IncrementalCounters[name]
 		if !ok {
-			return "", ErrNotFound
+			return "", serror.ErrNotFound
 		}
 		result = strconv.FormatInt(int64(val), 10)
 	default:
-		return "", ErrNotFound
+		return "", serror.ErrNotFound
 	}
 
 	return result, nil
+}
+
+func (s *memStorage) IsStorageAlive() bool {
+	if s.GaugeCounters != nil && s.IncrementalCounters != nil {
+		return true
+	}
+	return false
 }

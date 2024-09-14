@@ -35,7 +35,7 @@ func validateUpdateMetric(mType string, name string, value string) (errCodePair,
 	return errCodePair{}, true
 }
 
-func validateGetMetric(mType string, name string) (errCodePair, bool) {
+func validateGet(mType string, name string) (errCodePair, bool) {
 	if !isTypeValid(mType) {
 		return errCodePair{
 			code:  http.StatusBadRequest,

@@ -16,8 +16,12 @@ func main() {
 
 	opts := options{}
 	Parse(&opts)
-
-	storage.InitRecover(opts.filePath, opts.storeInterval, opts.restore)
+	
+	storage.Init(opts.dsn, storage.RecoverConfig{
+		RelPath:  opts.filePath,
+		Interval: opts.storeInterval,
+		Restore:  opts.restore,
+	})
 
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
@@ -30,7 +34,8 @@ func main() {
 	router.GET("/value/:type/:name",
 		wr.LogWrapper(wr.CompressWrapper(handlers.GetMetricViaQuery)))
 
-	router.GET("/", wr.LogWrapper(wr.CompressWrapper(handlers.GetAllMetrics)))
+	router.GET("/", wr.LogWrapper(wr.CompressWrapper(handlers.GetAll)))
+	router.GET("/ping", wr.LogWrapper(handlers.CheckDB))
 
 	router.NoRoute(wr.LogWrapper(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Not found"})

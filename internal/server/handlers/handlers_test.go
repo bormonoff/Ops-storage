@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"ops-storage/internal/server/storage"
+	
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
@@ -72,6 +74,7 @@ func TestInvalidUpdateMetric(t *testing.T) {
 
 	r := gin.New()
 	r.Any("/update/:type/:name/:value", UpdateQueryMetric)
+	storage.Init("", storage.RecoverConfig{})
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			request := httptest.NewRequest(tt.input.method, tt.input.url, nil)
