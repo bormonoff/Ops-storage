@@ -12,17 +12,42 @@ I was reading about Go runtime package and decided to make a lib for monitoring 
 
 ### Build step:
 - As usual clone the repository
-- Change the workdir to the repository dir and run
+- From the root repository dir run
 ```
  - make build
  ```
 ### Launch step
+#### 1. Launch using RAM storage
 To run the system, simply start the server and agent in separate terminals without any flags or environment variables.
 ```
  - cd build
  - ./server (optionally --help) or ./agent (optionally --help)
  ```
 
-To make sure the system works correctly check logs.
+#### 2. Launch using Docker
+To run the system using docker compose, create .env file before. Run from the root dir:
+```
+ - cp .env.example .env
+ - sudo docker compose build
+ - sudo docker compose up
+ ```
+All environment variables are properly set for use with Docker Compose.
 
-To gather metrics, you can use various methods. Begin by using curl or a browser to access the root router (http://$SERVER_ADDR:$SERVER_PORT/)
+### Explore step
+
+To make sure the system works correctly check logs or ping endpoint:
+```
+ http://$SERVER_ADDR:$SERVER_PORT/ping or localhost:8080/ping
+ ```
+
+To gather metrics, you can use various methods. Begin by using curl or a browser to access the root router:
+```
+ localhost:8080/
+ ```
+
+### Used libraries
+ - github.com/gin-gonic/gin
+ - github.com/go-resty/resty
+ - github.com/jackc/pgx
+ - github.com/stretchr/testify
+ - github.com/google/uuid
